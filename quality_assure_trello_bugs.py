@@ -1,9 +1,20 @@
 import argparse
-import pytz
+
+import requests
 from dotenv import load_dotenv
 import os
 from trello import TrelloClient, Card
 from datetime import datetime
+
+
+class CustomFieldItem:
+    id: str
+    value: None
+    idValue: str
+    idCustomField: str
+    idModel: str
+    modelType: str
+
 
 
 def get_all_cards() -> list[Card]:
@@ -52,6 +63,34 @@ def extract_cards_without_labels(cards: list[Card], labels: list[str], match_fun
 
     return extract_cards_with_labels(cards, labels, match_function=lambda booleans: not match_function(booleans))
 
+def make_api_request(url_extension: str, params: dict={}) -> any:
+    url = f"https://api.trello.com/1/{url_extension}"
+    authorised_params = params | {
+        "key": os.getenv('TRELLO_API_KEY'),
+        "token": os.getenv('TRELLO_TOKEN')
+    }
+    response = requests.get(url, params=authorised_params)
+    response.raise_for_status()
+
+    return response.json()
+
+def get_custom_fields(card: Card) -> list[CustomFieldItem]:
+    data = make_api_request(
+        url_extension=f"cards/{card.id}",
+        params={
+            "fields": "name",
+            "customFieldItems": "true",
+        }
+    )
+
+    return data["customFieldItems"]
+
+
+def get_custom_field_options_map(custom_field: CustomFieldItem) -> dict[str, str]:
+    data = make_api_request(url_extension=f"customFields/{custom_field["idCustomField"]}/options")
+
+    return {option["_id"]: option["value"]["text"] for option in data}
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -62,10 +101,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    cards = get_all_cards()
+    all_cards = get_all_cards()
 
-    recent_cards = extract_cards_since(cards, datetime(2025, 1, 23, tzinfo=pytz.UTC))
+    # recent_cards = extract_cards_since(all_cards, datetime(2025, 1, 23, tzinfo=pytz.UTC))
 
-    ops_cards = extract_cards_without_labels(recent_cards, ['ops', 'design'], any)
+    bug_cards = extract_cards_with_labels(all_cards, ['bug'])
 
-    print(get_links_from_cards(ops_cards))
+    custom_fields = get_custom_fields(bug_cards[2])
+
+    print(custom_fields)
+    print(get_custom_field_options_map(custom_fields[0]))
+
+    print(get_links_from_cards(bug_cards))
+    print(get_links_from_cards([card for card in bug_cards if len(card.custom_fields) > 0]))
+
+    pass
