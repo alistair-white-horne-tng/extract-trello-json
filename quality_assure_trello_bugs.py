@@ -74,7 +74,7 @@ def make_api_request(url_extension: str, params: dict={}) -> any:
 
     return response.json()
 
-def get_custom_fields(card: Card, all_custom_fields) -> list[dict[str, str]]:
+def get_custom_fields(card: Card) -> list[dict[str, str]]:
     data = make_api_request(
         url_extension=f"cards/{card.id}",
         params={
@@ -85,7 +85,7 @@ def get_custom_fields(card: Card, all_custom_fields) -> list[dict[str, str]]:
 
     custom_fields = []
     for item in data.get("customFieldItems"):
-        options = all_custom_fields.get(item.get("idCustomField"))
+        options = ALL_CUSTOM_FIELDS.get(item.get("idCustomField"))
 
         custom_fields.append({
             options.get("name", "Not found"): options.get("options", {}).get(item.get("idValue"), "Not found")
@@ -111,6 +111,8 @@ def get_all_custom_fields():
             }
         } for field in data
     }
+
+ALL_CUSTOM_FIELDS = get_all_custom_fields()
 
 
 if __name__ == "__main__":
