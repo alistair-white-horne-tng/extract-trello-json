@@ -74,7 +74,7 @@ def make_api_request(url_extension: str, params: dict={}) -> any:
 
     return response.json()
 
-def get_custom_fields(card: Card) -> list[CustomFieldItem]:
+def get_custom_fields(card: Card, all_custom_fields) -> list[dict[str, str]]:
     data = make_api_request(
         url_extension=f"cards/{card.id}",
         params={
@@ -83,13 +83,34 @@ def get_custom_fields(card: Card) -> list[CustomFieldItem]:
         }
     )
 
-    return data["customFieldItems"]
+    custom_fields = []
+    for item in data.get("customFieldItems"):
+        options = all_custom_fields.get(item.get("idCustomField"))
+
+        custom_fields.append({
+            options.get("name", "Not found"): options.get("options", {}).get(item.get("idValue"), "Not found")
+        })
+
+    return custom_fields
 
 
-def get_custom_field_options_map(custom_field: CustomFieldItem) -> dict[str, str]:
-    data = make_api_request(url_extension=f"customFields/{custom_field["idCustomField"]}/options")
+def get_custom_field_options_map(custom_field) -> dict[str, str]:
+    data = make_api_request(url_extension=f"customFields/{custom_field.get("idCustomField")}/options")
 
-    return {option["_id"]: option["value"]["text"] for option in data}
+    return {option.get("_id"): option.get("value").get("text") for option in data}
+
+def get_all_custom_fields():
+    data = make_api_request(url_extension=f"boards/{os.getenv('TRELLO_BOARD_ID')}/customFields")
+
+    return {
+        field.get("id") : {
+            "name": field.get("name"),
+            "options": {
+                option.get("id") : option.get("value").get("text")
+                for option in field.get("options", [])
+            }
+        } for field in data
+    }
 
 
 if __name__ == "__main__":
@@ -107,10 +128,9 @@ if __name__ == "__main__":
 
     bug_cards = extract_cards_with_labels(all_cards, ['bug'])
 
-    custom_fields = get_custom_fields(bug_cards[2])
+    all_custom_fields = get_all_custom_fields()
 
-    print(custom_fields)
-    print(get_custom_field_options_map(custom_fields[0]))
+    custom_fields = get_custom_fields(bug_cards[11], all_custom_fields)
 
     print(get_links_from_cards(bug_cards))
     print(get_links_from_cards([card for card in bug_cards if len(card.custom_fields) > 0]))
