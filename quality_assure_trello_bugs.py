@@ -1,10 +1,11 @@
 import argparse
-
 import requests
 from dotenv import load_dotenv
 import os
 from trello import TrelloClient, Card
 from datetime import datetime
+
+load_dotenv()
 
 
 class CustomFieldItem:
@@ -18,8 +19,6 @@ class CustomFieldItem:
 
 
 def get_all_cards() -> list[Card]:
-    load_dotenv()
-
     client = TrelloClient(
         api_key=os.getenv('TRELLO_API_KEY'),
         api_secret=os.getenv('TRELLO_API_SECRET'),
@@ -62,6 +61,9 @@ def extract_cards_without_labels(cards: list[Card], labels: list[str], match_fun
     # use match_function = all or any to decide whether to and- or or-match
 
     return extract_cards_with_labels(cards, labels, match_function=lambda booleans: not match_function(booleans))
+
+def extract_archived_cards(cards: list[Card], is_archived: bool=False) -> list[Card]:
+    return [card for card in cards if card.closed == is_archived]
 
 def make_api_request(url_extension: str, params: dict={}) -> any:
     url = f"https://api.trello.com/1/{url_extension}"
@@ -112,8 +114,21 @@ def get_all_custom_fields():
         } for field in data
     }
 
-ALL_CUSTOM_FIELDS = get_all_custom_fields()
 
+def quality_check(cards: list[Card]):
+    defective_cards = {}
+
+    # All bug cards should have a severity
+    for card in extract_cards_with_labels(cards, ["bug"]):
+        custom_fields = get_custom_fields(card)
+
+        if not "Severity" in custom_fields.keys():
+            defective_cards["Bug card has no severity"] = card
+
+    return defective_cards
+
+
+ALL_CUSTOM_FIELDS = get_all_custom_fields()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -125,16 +140,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     all_cards = get_all_cards()
+    all_cards = extract_archived_cards(all_cards)
 
-    # recent_cards = extract_cards_since(all_cards, datetime(2025, 1, 23, tzinfo=pytz.UTC))
+    links = get_links_from_cards(all_cards)
 
-    bug_cards = extract_cards_with_labels(all_cards, ['bug'])
-
-    all_custom_fields = get_all_custom_fields()
-
-    custom_fields = get_custom_fields(bug_cards[11], all_custom_fields)
-
-    print(get_links_from_cards(bug_cards))
-    print(get_links_from_cards([card for card in bug_cards if len(card.custom_fields) > 0]))
+    defective_cards = quality_check(all_cards)
 
     pass

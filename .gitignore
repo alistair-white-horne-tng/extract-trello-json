@@ -7,3 +7,5 @@
 mise*
 
 .env
+
+__pycache__
