@@ -34,7 +34,7 @@ It only caused an issue for 3 (out of 420) of our cards. ⚠️
 2. Add your Trello board's data to the `.env` file.
 3. Populate the `.json` config files. It's possible to get lists of these things from the
    [Trello API](https://developer.atlassian.com/cloud/trello/rest). E.g. for the `labels`, send a `GET` request to
-   `https://api.trello.com/1/boards/[BOARD_ID/lists` with your key and token as headers.
+   `https://api.trello.com/1/boards/[BOARD_ID]/lists` with your key and token as headers.
    1. Edit the `columns_mapping.json` to reflect how your Trello columns will map to the Jira columns.
    2. Edit the `jira_labels.json` to include in inclusive list of label values to use in Jira (any Trello labels which
       don't match (case-insensitive) will be discarded).
@@ -52,7 +52,7 @@ It only caused an issue for 3 (out of 420) of our cards. ⚠️
     ```
 8. Spin up the attachments server:
     ```zsh
-    python attachments_server.py
+    python attachment_server.py
     ```
 9. Start the Jira import using the `.csv` file generated in Step 7. Note that you must be a Jira site admin
    (not a board admin) in order to access many of the fields (e.g. card creation time, comments, attachments).

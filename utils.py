@@ -221,9 +221,12 @@ def filter_labels(labels: list[str]) -> list[str]:
             jira_labels.append(JIRA_LABELS[JIRA_LABELS_LOWER.index(label.lower())])
 
     # Replace all spaces with dashes - Jira doesn't support spaces in labels
-    jira_labels = [label.replace(" ", "-") for label in jira_labels]
+    jira_labels = format_labels(jira_labels)
 
     return jira_labels
+
+def format_labels(labels: list[str]) -> list[str]:
+    return [label.title().replace(" ", "-") for label in labels]
 
 def get_card_attachment_urls(card_id: str):
     attachments = make_api_request(f"card/{card_id}/attachments")

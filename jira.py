@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import utils
 from tqdm import tqdm
 from translate_to_markdown import md_to_jira
@@ -21,7 +22,7 @@ def process_card(card):
     members = [utils.get_member_short_code(member_id) for member_id in card.get("idMembers", [])]
     checklists = utils.get_card_checklists(card.get("id"))
     checklist_items = utils.process_checklists(checklists)
-    trello_id = f"MAVIS-{card.get("idShort", "")}"
+    trello_id = card.get("idShort", "")
     creator = utils.get_member_short_code(utils.get_card_creator(card.get("id")).get("id", ""))
     custom_fields = utils.get_card_custom_fields(card.get("id"))
     severity = custom_fields.get("Severity", "") # TODO this doesn't check for cards which have "valid" values for Jira
@@ -30,7 +31,20 @@ def process_card(card):
     comments = utils.process_comments(comments)
     column = utils.get_list_name(card.get("idList"))
     creation_time = utils.get_time_from_id(card.get("id"))
-    jira_labels = utils.filter_labels(labels) + ["Migrated-from-Trello"]
+    # jira_labels = utils.filter_labels(labels) + ["Migrated-from-Trello"]
+    jira_labels = utils.format_labels(labels) + ["Migrated-from-engagement-Trello"]
+    color = card.get("cover", {}).get("color", None)
+
+    match color:
+        case "lime":
+            target_end = datetime(2026, 1, 1)
+        case "yellow":
+            target_end = datetime(2026, 4, 1)
+        case "red":
+            target_end = datetime(2026, 9, 1)
+        case _:
+            target_end = None
+            # print(f"Unknown color {color}")
 
     trello_attachments = utils.get_card_attachment_urls(card.get("id"))
     trello_files = trello_attachments.get("files")
@@ -56,22 +70,23 @@ def process_card(card):
     return {
         "summary": summary,
         "description": description,
-        "severity": severity,
-        "priority": severity,
-        "component": component,
-        "assignee": members[0] if len(members) > 0 else "",
+        # "severity": severity,
+        # "priority": severity,
+        # "component": component,
+        # "assignee": members[0] if len(members) > 0 else "",
         "collaborators": members[1:],
         "trello_id": trello_id,
-        "workaround": workaround,
-        "release_notes": release_notes,
+        # "workaround": workaround,
+        # "release_notes": release_notes,
         "issue_type": issue_type,
         "labels": jira_labels,
         "reporter": creator,
         "date_created": creation_time.isoformat(),
-        "status": status,
+        "target_end": target_end.isoformat() if target_end else "",
+        # "status": status,
         "comments": comments,
         "attachments": attachments_local_urls,
-        "fix_version": version,
+        # "fix_version": version,
         "checklist_items": checklist_items,
     }
 
